@@ -40,3 +40,63 @@ The main() function is the entry point of the application, which starts the imag
 Execution Details:
 Initiates the grab() function with a predefined camera serial number.
 Implements exception handling to manage errors and ensure clean exits with appropriate exit codes.
+
+Sapera API documents that will be useful for implmenting the saving of a continous image:
+
+Sapera LT++ Programmers Guide:
+
+look in to the following buffer:
+
+SapBuffer:: TypeContiguous
+
+Buffers are allocated in Sapera Contiguous Memory, which is one large chunk of non-pageable and non-moveable memory reserved by Sapera at boot time. Buffer data is thus contained in a single memory block (not segmented). These buffers may be used as source and destination for transfer resources.
+
+Declare this big buffer as a means of storing the frames:
+
+SapBuffer:: TypeContiguous
+
+Buffers are allocated in Sapera Contiguous Memory, which is one large chunk of non-pageable and non-moveable memory reserved by Sapera at boot time. Buffer data is thus contained in a single memory block (not segmented). These buffers may be used as source and destination for transfer resources.
+
+Then use the following method to write the frames with an offset:
+
+SapBuffer::Write
+
+BOOL Write(UINT64 offset, int numElements, void* pData); BOOL Write(int index, UINT64 offset, int numElements, void* pData);
+
+Parameters
+
+offset
+
+Starting position within the buffer (in pixels)
+
+numElements
+
+Number of pixels to write
+
+pData
+
+Source memory area for pixel values
+
+index
+
+Buffer resource index
+
+Return Value
+
+Returns TRUE if successful, FALSE otherwise
+
+Remarks
+
+Writes a consecutive series of elements (pixels) to a buffer resource, ignoring line boundaries.
+
+For 1-bit data buffers, the offset must be a multiple of 8, and the memory area must have at least ((numElements + 7) >> 3) bytes.
+
+For buffer formats other than 1-bit, the memory area must have a number of bytes of at least numElements times the value returned by the GetBytesPerPixel method.
+
+If no buffer index is specified, the current index is assumed.
+
+Writing elements to video memory buffers may be very slow.
+
+Then use the save method to save the entire buffer.
+
+
