@@ -1,0 +1,31 @@
+Download Sapera LT version 8.73.00.2253
+link: https://www.teledynedalsa.com/en/products/imaging/vision-software/sapera-lt/
+
+Clone the repository 
+
+Install Microsoft Visual Studios 2019
+Link: https://visualstudio.microsoft.com/vs/older-downloads/
+
+
+Open the project and do the following:
+
+Step 1: Configure Your Project
+Project Name and Location: Enter a project name and choose a suitable location for your project files. Make sure the "Place solution and project in the same directory" option is checked for simplicity.
+Platform and Language: Ensure "x64" is selected as the target platform to match your 64-bit development environment. Click "Create".
+Step 2: Configure Project for Sapera LT ++
+Set Environment Variable (if not set): Ensure the SAPERADIR environment variable is set to the installation directory of the Sapera LT ++ SDK. You can check this by searching for "Environment Variables" in the Windows search box, clicking "Edit the system environment variables," and then "Environment Variables." If SAPERADIR isn't listed under "System variables," add it with the correct path.
+Include Directory for Basic Classes:
+Right-click on your project in the Solution Explorer and select "Properties."
+Navigate to "C/C++" > "General" > "Additional Include Directories."
+Add $(SAPERADIR)\Classes\Basic;$(SAPERADIR)\Include; to include the headers for basic functionality.
+Include Directory for GUI Classes (If using GUI):
+Still in the project properties, under the same section ("C/C++" > "General"), add $(SAPERADIR)\Classes\Gui; to the paths if you're using GUI components.
+Step 3: Add Libraries
+For Basic Class Library:
+Navigate to "Linker" > "Input" > "Additional Dependencies" in project properties.
+Add $(SAPERADIR)\Lib\Win64\SapClassBasic.lib; for basic class functionalities.
+For GUI Class Library (If using GUI):
+In the same "Additional Dependencies" section, add the appropriate SapClassGui.lib and SapClassGuiD.lib paths for your Visual Studio version and architecture. Use $(SAPERADIR)\Lib\Win64\VS2019\SapClassGui.lib; (or the respective version you're using) and ensure to handle the debug and release versions as per the initial guidance.
+Step 4: Runtime Library Configuration
+Runtime Library Setup:In project properties, navigate to "C/C++" > "Code Generation."
+For "Runtime Library," select "Multi-threaded DLL (/MD)" for release builds or "Multi-threaded Debug DLL (/MDd)" for debug builds.
