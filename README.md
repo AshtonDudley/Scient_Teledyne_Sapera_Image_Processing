@@ -99,4 +99,5 @@ Writing elements to video memory buffers may be very slow.
 
 Then use the save method to save the entire buffer.
 
-
+For more examples use the Saper LT++ User Manual.
+No examples avalable for our application, but has examples on how to create buffers.
