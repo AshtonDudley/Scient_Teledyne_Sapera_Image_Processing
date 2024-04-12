@@ -18,6 +18,7 @@ Responsibilities:
 Overriding the Run() method to implement the specific image processing logic needed for your application.
 Ensuring buffer readiness and performing image processing if conditions are met.
 Saving the processed image in TIFF format.
+
 3. Image Acquisition and Buffer Management
 The grab() function sets up the environment for image grabbing and processing using the identified camera device.
 
@@ -32,6 +33,7 @@ Callback functions are crucial for responding to image acquisition and processin
 Functions:
 transferCallback(): Called on each image transfer event to manage frame counting and initiate processing if the image data is valid.
 processingCallback(): Invoked after each processing event to update the count of processed frames.
+
 5. Main Execution Flow
 The main() function is the entry point of the application, which starts the image capture and processing operations.
 
