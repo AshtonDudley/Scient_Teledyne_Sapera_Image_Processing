@@ -7,6 +7,7 @@
 #include <atomic>
 #include "SapClassBasic.h"
 
+
 // Function to find a camera device by its serial number.
 // Returns a SapAcqDevice object representing the camera if found.
 std::unique_ptr<SapAcqDevice> getDeviceBySN(const std::string& sn) {
@@ -17,7 +18,7 @@ std::unique_ptr<SapAcqDevice> getDeviceBySN(const std::string& sn) {
     for (int i = 0; i < serverCount; i++) {
         if (SapManager::GetResourceCount(i, SapManager::ResourceAcqDevice) != 0) {
             SapManager::GetServerName(i, serverName, sizeof(serverName));
-
+            
             auto camera = std::make_unique<SapAcqDevice>(serverName);
             if (camera->Create()) {
                 int featureCount;
@@ -62,6 +63,9 @@ BOOL SapMyProcessing::Run() {
     int proIndex = GetIndex();  // Get the current buffer index.
 
     SapBuffer::State state;
+    
+
+
     // Check if the buffer is ready for processing.
     if (!m_pBuffers->GetState(proIndex, &state) || state != SapBuffer::StateFull) {
         std::cerr << "Buffer is not ready for processing." << std::endl;
@@ -114,15 +118,27 @@ void processingCallback(SapProCallbackInfo* info) {
 }
 
 // Main function to initiate grabbing and processing of images from the camera.
-void grab(const std::string& serialNumber) {
+void grab(std::unique_ptr<SapAcqDevice> &camera) {
     const int maxFrameCount = 10;
     TransferContext context;
 
-    auto camera = getDeviceBySN(serialNumber);
+    
 
     std::unique_ptr<SapBuffer> buffer = std::make_unique<SapBufferWithTrash>(maxFrameCount, camera.get());
     std::unique_ptr<SapTransfer> transfer = std::make_unique<SapAcqDeviceToBuf>(camera.get(), buffer.get(), transferCallback, &context);
     context.processing = std::make_shared<SapMyProcessing>(buffer.get(), processingCallback, &context);
+    
+    bool rcHeight= buffer->SetHeight(32);
+    bool rcWidth = buffer->SetWidth(1024);
+
+    int bufferHeight = buffer->GetHeight(); // Debug Statements
+    int bufferWidth = buffer->GetWidth();   // Debug Statements
+
+
+    std::cout << "Buffer Height: " << bufferHeight << std::endl;    // Debug Statements
+    std::cout << "Buffer Width: " << bufferWidth << std::endl;      // Debug Statements
+    std::cout << "Height RC: " << rcHeight << std::endl;      // Debug Statements
+    std::cout << "Width RC: " << rcWidth << std::endl;      // Debug Statements
 
     auto cleanup = [&]() {
         if (context.processing) context.processing->Destroy();
@@ -136,6 +152,7 @@ void grab(const std::string& serialNumber) {
         if (!transfer->Create()) throw std::runtime_error("Failed to create transfer object.");
         if (!context.processing->Create()) throw std::runtime_error("Failed to create processing object.");
 
+    
         transfer->SetAutoEmpty(false);
         context.processing->SetAutoEmpty(true);
         context.processing->Init();
@@ -158,8 +175,10 @@ void grab(const std::string& serialNumber) {
 // Entry point of the application.
 int main() {
     try {
-        std::string serialNumber = "H2657500";  // Camera serial number.
-        grab(serialNumber);  // Start the grab and process procedure.
+        std::string serialNumber = "H2657500";      // Camera serial number.
+        auto camera = getDeviceBySN(serialNumber);
+        grab(camera);  // Start the grab and process procedure.
+
     }
     catch (const std::exception& e) {
         std::cerr << "Exception caught: " << e.what() << std::endl;
