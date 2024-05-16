@@ -7,6 +7,47 @@
 #include <atomic>
 #include "SapClassBasic.h"
 
+std::unique_ptr<SapAcqDevice> getDeviceFromFile(const std::string& configFilepath) {
+
+    std::string sn = "H2657500";
+
+    char serverName[CORSERVER_MAX_STRLEN];
+    char serialNumberName[2048];
+    // int deviceNumber = 0;
+
+    
+    const int serverCount = SapManager::GetServerCount();
+    for (int i = 0; i < serverCount; i++) {
+        if (SapManager::GetResourceCount(i, SapManager::ResourceAcqDevice) != 0) {
+            SapManager::GetServerName(i, serverName, sizeof(serverName));
+
+            SapLocation loc(serverName, i);
+            auto camera = std::make_unique<SapAcqDevice>(serverName);
+
+
+            camera->SetConfigFile(configFilepath.c_str());
+
+            if (camera->Create()) {
+                int featureCount;
+                if (camera->GetFeatureCount(&featureCount) && featureCount > 0) {
+                    if (camera->GetFeatureValue("DeviceID", serialNumberName, sizeof(serialNumberName)) && serialNumberName == sn) {
+                        std::cerr << "Camera created." << std::endl;
+                        return camera;
+                    }
+                }
+            }
+            else {
+                std::cerr << "Camera not created." << std::endl;
+                // No need to call Destroy here, unique_ptr will take care of deallocating memory
+            }
+        }
+    }
+   
+
+    throw std::runtime_error("Camera config file \"" + configFilepath + "\" was not found.");
+}
+
+
 
 // Function to find a camera device by its serial number.
 // Returns a SapAcqDevice object representing the camera if found.
@@ -64,8 +105,6 @@ BOOL SapMyProcessing::Run() {
 
     SapBuffer::State state;
     
-
-
     // Check if the buffer is ready for processing.
     if (!m_pBuffers->GetState(proIndex, &state) || state != SapBuffer::StateFull) {
         std::cerr << "Buffer is not ready for processing." << std::endl;
@@ -122,23 +161,20 @@ void grab(std::unique_ptr<SapAcqDevice> &camera) {
     const int maxFrameCount = 10;
     TransferContext context;
 
-    
+  
 
     std::unique_ptr<SapBuffer> buffer = std::make_unique<SapBufferWithTrash>(maxFrameCount, camera.get());
     std::unique_ptr<SapTransfer> transfer = std::make_unique<SapAcqDeviceToBuf>(camera.get(), buffer.get(), transferCallback, &context);
     context.processing = std::make_shared<SapMyProcessing>(buffer.get(), processingCallback, &context);
     
-    bool rcHeight= buffer->SetHeight(32);
-    bool rcWidth = buffer->SetWidth(1024);
 
-    int bufferHeight = buffer->GetHeight(); // Debug Statements
-    int bufferWidth = buffer->GetWidth();   // Debug Statements
+    // bool rcHeight= buffer->SetHeight(32);
+    // bool rcWidth = buffer->SetWidth(1024);
+    // 
+    // std::cout << "Height RC: " << rcHeight << std::endl;      // Debug Statements
+    // std::cout << "Width RC: " << rcWidth << std::endl;      // Debug Statements
 
 
-    std::cout << "Buffer Height: " << bufferHeight << std::endl;    // Debug Statements
-    std::cout << "Buffer Width: " << bufferWidth << std::endl;      // Debug Statements
-    std::cout << "Height RC: " << rcHeight << std::endl;      // Debug Statements
-    std::cout << "Width RC: " << rcWidth << std::endl;      // Debug Statements
 
     auto cleanup = [&]() {
         if (context.processing) context.processing->Destroy();
@@ -152,7 +188,12 @@ void grab(std::unique_ptr<SapAcqDevice> &camera) {
         if (!transfer->Create()) throw std::runtime_error("Failed to create transfer object.");
         if (!context.processing->Create()) throw std::runtime_error("Failed to create processing object.");
 
-    
+        int bufferHeight = buffer->GetHeight(); // Debug Statements
+        int bufferWidth = buffer->GetWidth();   // Debug Statements
+
+        std::cout << "Buffer Height: " << bufferHeight << std::endl;    // Debug Statements
+        std::cout << "Buffer Width: " << bufferWidth << std::endl;      // Debug Statements
+
         transfer->SetAutoEmpty(false);
         context.processing->SetAutoEmpty(true);
         context.processing->Init();
@@ -176,7 +217,9 @@ void grab(std::unique_ptr<SapAcqDevice> &camera) {
 int main() {
     try {
         std::string serialNumber = "H2657500";      // Camera serial number.
-        auto camera = getDeviceBySN(serialNumber);
+        // auto camera = getDeviceBySN(serialNumber);
+        auto camera = getDeviceFromFile("C:\\Program Files\\Teledyne DALSA\\Sapera\\CamFiles\\User\\T_Linea2-C4096-7um_Custom_1_Custom_1.ccf");
+        // std::unique_ptr<SapAcqDevice>  camera = nullptr;
         grab(camera);  // Start the grab and process procedure.
 
     }
