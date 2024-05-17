@@ -7,7 +7,7 @@
 #include <atomic>
 #include "SapClassBasic.h"
 
-extern "C" int helloWorldC();
+
 
 
 // Function to find a camera device and load its settings from a .cff file.
@@ -201,16 +201,15 @@ void grab(std::unique_ptr<SapAcqDevice> &camera) {
 // Entry point of the application.
 int main() {
     try {
-        helloWorldC();
         
-        /* 
+        
         // std::string serialNumber = "H2657500";      // Camera serial number.
         // auto camera = getDeviceBySN(serialNumber);
         
         auto camera = getDeviceFromFile("C:\\Program Files\\Teledyne DALSA\\Sapera\\CamFiles\\User\\T_Linea2-C4096-7um_Custom_1_Custom_1.ccf");
         grab(camera);  // Start the grab and process procedure.
         
-        */
+        
     }
     catch (const std::exception& e) {
         std::cerr << "Exception caught: " << e.what() << std::endl;
