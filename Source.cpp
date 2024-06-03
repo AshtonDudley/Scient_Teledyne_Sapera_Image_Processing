@@ -7,6 +7,9 @@
 #include <atomic>
 #include "SapClassBasic.h"
 
+#include "SapMyProcessing.h"
+
+
 
 
 
@@ -35,12 +38,8 @@ std::unique_ptr<SapAcqDevice> getDeviceFromFile(const std::string& configFilepat
                 return camera;
                 }
             }
-            else {
-                std::cout << "[DEBUG] Camera not created." << std::endl;
-                // No need to call Destroy here, unique_ptr will take care of deallocating memory
-            }
         }
-    throw std::runtime_error("Camera config file \"" + configFilepath + "\" was not found.");
+    throw std::runtime_error("[ERROR] Camera config file \"" + configFilepath + "\" was not found.");
 }
 
 
@@ -75,58 +74,6 @@ std::unique_ptr<SapAcqDevice> getDeviceBySN(const std::string& sn) {
     throw std::runtime_error("Camera \"" + sn + "\" was not found.");
 }
 
-
-// Custom processing class derived from SapProcessing.
-class SapMyProcessing : public SapProcessing
-{
-public:
-    SapMyProcessing(SapBuffer* pBuffers, SapProCallback pCallback, void* pContext);
-
-    virtual ~SapMyProcessing();
-
-protected:
-    virtual BOOL Run();  // Custom processing logic to be executed.
-};
-
-SapMyProcessing::SapMyProcessing(SapBuffer* pBuffers, SapProCallback pCallback, void* pContext)
-    : SapProcessing(pBuffers, pCallback, pContext) {}
-
-SapMyProcessing::~SapMyProcessing() {
-    if (m_bInitOK) Destroy();  // Ensure proper cleanup.
-}
-
-// Implementation of the custom processing logic.
-BOOL SapMyProcessing::Run() {
-    int proIndex = GetIndex();  // Get the current buffer index.
-
-    SapBuffer::State state;
-    
-    // Check if the buffer is ready for processing.
-    if (!m_pBuffers->GetState(proIndex, &state) || state != SapBuffer::StateFull) {
-        std::cerr << "Buffer is not ready for processing." << std::endl;
-        return FALSE;
-    }
-
-    void* pData = nullptr;
-    m_pBuffers->GetAddress(proIndex, &pData);  // Access the data in the buffer.
-    int dataSize = 0;
-    m_pBuffers->GetSpaceUsed(proIndex, &dataSize);  // Get the size of the data in the buffer.
-
-    // Construct a filename for saving the image.
-    std::string filename = "SavedImage_" + std::to_string(proIndex) + ".tiff";
-    const char* options = "-format tiff -compression lzw";  // Specify TIFF format and compression.
-
-    // Save the buffer content to a file.
-    if (m_pBuffers->Save(filename.c_str(), options, proIndex)) {
-        std::cout << "Image successfully saved to " << filename << std::endl;
-    }
-    else {
-        std::cerr << "Failed to save image to " << filename << std::endl;
-        return FALSE;
-    }
-
-    return TRUE;
-}
 
 // Structure to hold context information for callbacks.
 struct TransferContext {
@@ -176,8 +123,8 @@ void grab(std::unique_ptr<SapAcqDevice> &camera) {
         int bufferHeight = buffer->GetHeight(); // Debug Statements
         int bufferWidth = buffer->GetWidth();   // Debug Statements
 
-        std::cout << "Buffer Height: " << bufferHeight << std::endl;    // Debug Statements
-        std::cout << "Buffer Width: " << bufferWidth << std::endl;      // Debug Statements
+        std::cout << "[DEBUG] Buffer Height: " << bufferHeight << std::endl;    // Debug Statements
+        std::cout << "[DEBUG] Buffer Width: " << bufferWidth << std::endl;      // Debug Statements
 
         transfer->SetAutoEmpty(false);
         context.processing->SetAutoEmpty(true);
@@ -197,6 +144,56 @@ void grab(std::unique_ptr<SapAcqDevice> &camera) {
     }
 }
 
+void snap(std::unique_ptr<SapAcqDevice>& camera) {
+    int maxFrameCount = 1;
+    
+    TransferContext context;
+
+    std::unique_ptr<SapBuffer> buffer = std::make_unique<SapBufferWithTrash>(maxFrameCount, camera.get());
+    std::unique_ptr<SapTransfer> transfer = std::make_unique<SapAcqDeviceToBuf>(camera.get(), buffer.get(), transferCallback, &context);
+    context.processing = std::make_shared<SapMyProcessing>(buffer.get(), processingCallback, &context);
+
+    auto cleanup = [&]() {
+        if (context.processing) context.processing->Destroy();
+        if (transfer) transfer->Destroy();
+        if (buffer) buffer->Destroy();
+        if (camera) camera->Destroy();  // Now it's safe to directly call Destroy
+        };
+
+    try {
+        if (!buffer->Create()) throw std::runtime_error("Failed to create buffer object.");
+        if (!transfer->Create()) throw std::runtime_error("Failed to create transfer object.");
+        if (!context.processing->Create()) throw std::runtime_error("Failed to create processing object.");
+
+        int bufferHeight = buffer->GetHeight(); // Debug Statements
+        int bufferWidth = buffer->GetWidth();   // Debug Statements
+
+        std::cout << "[DEBUG] Buffer Height: " << bufferHeight << std::endl;    // Debug Statements
+        std::cout << "[DEBUG] Buffer Width: " << bufferWidth << std::endl;      // Debug Statements
+
+        transfer->SetAutoEmpty(false);
+        context.processing->SetAutoEmpty(true);
+        context.processing->Init();
+
+        // while (context.frameGrabCount < maxFrameCount);
+        for (int i = 0; i < 10; i++) {
+            transfer->Snap(maxFrameCount);
+            transfer->Freeze();
+            if (!transfer->Wait(5000)) throw std::runtime_error("Failed to stop grab.");
+            while (context.frameProcessingCount < maxFrameCount);
+        }
+        
+
+        cleanup();
+    }
+    catch (...) {
+        cleanup();
+        throw;
+    }
+}
+
+
+
 
 // Entry point of the application.
 int main() {
@@ -207,8 +204,10 @@ int main() {
         // auto camera = getDeviceBySN(serialNumber);
         
         auto camera = getDeviceFromFile("C:\\Program Files\\Teledyne DALSA\\Sapera\\CamFiles\\User\\T_Linea2-C4096-7um_Custom_1_Custom_1.ccf");
-        grab(camera);  // Start the grab and process procedure.
-        
+        // grab(camera);  // Start the grab and process procedure.
+        for (int i = 0; i < 1; i++) {
+            snap(camera);
+        }
         
     }
     catch (const std::exception& e) {

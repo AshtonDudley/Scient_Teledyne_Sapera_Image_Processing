@@ -142,8 +142,11 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="SapMyProcessing.cpp" />
     <ClCompile Include="Source.cpp" />
-    <ClCompile Include="Teledyne_dalsa_application_2.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="SapMyProcessing.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
