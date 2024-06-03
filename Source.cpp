@@ -31,12 +31,12 @@ std::unique_ptr<SapAcqDevice> getDeviceFromFile(const std::string& configFilepat
             camera->SetConfigFile(configFilepath.c_str());
 
             if (camera->Create()) {
-                std::cerr << "Camera created." << std::endl;
+                std::cout << "[DEBUG] Camera created." << std::endl;
                 return camera;
                 }
             }
             else {
-                std::cerr << "Camera not created." << std::endl;
+                std::cout << "[DEBUG] Camera not created." << std::endl;
                 // No need to call Destroy here, unique_ptr will take care of deallocating memory
             }
         }
@@ -61,13 +61,13 @@ std::unique_ptr<SapAcqDevice> getDeviceBySN(const std::string& sn) {
                 int featureCount;
                 if (camera->GetFeatureCount(&featureCount) && featureCount > 0) {
                     if (camera->GetFeatureValue("DeviceID", serialNumberName, sizeof(serialNumberName)) && serialNumberName == sn) {
-                        std::cerr << "Camera created." << std::endl;
+                        std::cout << "Camera created." << std::endl;
                         return camera;
                     }
                 }
             }
             else {
-                std::cerr << "Camera not created." << std::endl;
+                std::cout << "Camera not created." << std::endl;
                 // No need to call Destroy here, unique_ptr will take care of deallocating memory
             }
         }
